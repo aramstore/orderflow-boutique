@@ -1,47 +1,71 @@
-# خطة إعادة هيكلة صفحة الطلبات
+## خطة نقل المشروع من Lovable Cloud إلى Supabase خاص بك
 
-الهدف: نقل صفحة `Orders.tsx` من «تحميل كل الطلبات في الذاكرة» إلى «تحميل حسب التبويب مع عدّ على الخادم»، لتعمل بكفاءة عند 10k+ طلب.
+### المرحلة 1: تجهيز بيانات الاتصال
+من لوحة Supabase الجديدة (Settings → Database / API)، احصل على:
+- **Project URL** (مثل: `https://xxx.supabase.co`)
+- **anon public key**
+- **service_role key** (سري — للنقل فقط)
+- **Database password** + **Connection string** (Direct connection على المنفذ 5432)
 
-## الوضع الحالي
-- تحميل كل طلبات المتجر دفعة واحدة (1235 الآن، قابل للنمو).
-- كل التبويبات والفلاتر والعمليات الجماعية تشتغل على مصفوفة في الذاكرة.
-- الفهارس + دوال العدّ على الخادم تم إضافتها مسبقاً وجاهزة للاستخدام.
+### المرحلة 2: تصدير قاعدة البيانات الحالية
+سأعطيك أمر `pg_dump` كامل لتشغيله من جهازك (يحتاج `postgresql-client` مثبت):
 
-## المرحلة 1 — البنية التحتية للعدّ والقوائم (تغيير مرئي بسيط، مخاطرة منخفضة)
-- ربط شارات التبويبات (قيد الانتظار، جاري التوصيل، تم الاستلام…) بـ `orders_status_counts` RPC بدل `.length`.
-- ربط خيارات «حالة شركة التوصيل» المنسدلة وأعدادها بـ `orders_shipped_carrier_counts` RPC.
-- إضافة كاش بسيط يتحدث عند المزامنة / تغيير الحالة.
+```bash
+# Dump كامل: سكيما + بيانات + auth.users
+pg_dump "postgresql://postgres.iyqooryhmshlajuhabmc:[OLD_PASSWORD]@aws-0-[region].pooler.supabase.com:5432/postgres" \
+  --schema=public --schema=auth --schema=storage \
+  --no-owner --no-privileges --no-publications --no-subscriptions \
+  -f libya_store_dump.sql
+```
 
-## المرحلة 2 — تحميل حسب التبويب (المخاطرة الرئيسية)
-- لكل تبويب: استعلام مستقل يجلب أول 100-200 طلب فقط حسب الحالة + الفلتر النشط.
-- زر «تحميل المزيد» أو pagination رقمية في الأسفل.
-- البحث/فلاتر التاريخ → استعلام جديد للخادم بدل تصفية مصفوفة.
+ملاحظة: ستحتاج كلمة سر قاعدة بيانات Lovable Cloud الحالية — أحضرها لك من Cloud → Database → Connection.
 
-## المرحلة 3 — العمليات الجماعية والتصدير
-- التحديد الجماعي: «حدد كل النتائج المطابقة» (وليس فقط الصفحة المعروضة) عبر استعلام يجيب IDs.
-- تصدير Excel: استعلام مخصص يجلب كل الطلبات المطابقة للفلتر مباشرة (لا يعتمد على ما هو محمل).
-- التحديثات الجماعية للحالة: تعمل بـ IDs المختارة كما الآن.
+### المرحلة 3: تنظيف الـ dump قبل الاستيراد
+قبل الاستيراد، نحذف من الملف:
+- مراجع `supabase_admin`, `pgsodium`, `vault`, `realtime` الخاصة بـ Lovable
+- أوامر `CREATE EXTENSION` للإضافات غير المتوفرة افتراضياً (سأحدد القائمة بعد الاطلاع على الـ dump)
+- إعدادات publications/subscriptions الخاصة بـ realtime القديم
 
-## المرحلة 4 — تنظيف
-- إزالة `fetchAllOrdersForStore` والـ helpers القديمة.
-- توحيد منطق إعادة الجلب بعد كل تعديل (refetch التبويب الحالي فقط).
+سأولّد لك سكربت `sed` أو Python جاهز للتنظيف.
 
-## الملفات المتأثرة
-- `src/pages/Orders.tsx` (الرئيسي، 2326 سطر — سيتقلص).
-- ربما استخراج hooks: `useOrdersTab`, `useOrderCounts`.
-- لا تغييرات DB إضافية مطلوبة.
+### المرحلة 4: الاستيراد إلى Supabase الجديد
+```bash
+psql "postgresql://postgres.[NEW_REF]:[NEW_PASSWORD]@aws-0-[region].pooler.supabase.com:5432/postgres" \
+  -f libya_store_dump_clean.sql
+```
 
-## التفاصيل التقنية
-- استخدام `react-query` (موجود مسبقاً) لكاش لكل تبويب مع `staleTime` معقول.
-- مفاتيح الكاش: `['orders', storeId, tab, filters, page]` و`['orders-counts', storeId]`.
-- إبطال الكاش بعد العمليات (تحديث حالة، حذف، تسوية…).
+ثم تشغيل أوامر إعادة ضبط الـ sequences:
+```sql
+SELECT setval('public.order_code_seq', (SELECT COALESCE(MAX(last_value),1) FROM public.store_order_counters));
+```
 
-## ما لن يتغير
-- الواجهة والتبويبات والأعمدة والتصدير بنفس الشكل من منظور المستخدم.
-- منطق الأعمال (التسويات، الإرجاع، شركة الشحن) كما هو.
+### المرحلة 5: نشر Edge Functions
+كل الـ Edge Functions (موجودة في `supabase/functions/`) لازم تنشر يدوياً في Supabase الجديد:
+```bash
+supabase link --project-ref [NEW_REF]
+supabase functions deploy --no-verify-jwt
+```
+ثم إضافة كل الـ Secrets يدوياً في Supabase Dashboard → Edge Functions → Secrets:
+- `LOVABLE_API_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`, `TURNSTILE_SECRET_KEY` + أي مفاتيح خاصة بـ WhatsApp/Facebook إن وجدت.
 
-## المخاطر
-- الملف ضخم وعمليات الجمعي/التصدير حساسة. يُنصح بتطبيق المرحلة 1 منفصلة ثم المراحل 2-4 على دفعات.
-- اختبار يدوي بعد كل مرحلة ضروري.
+### المرحلة 6: تحديث المشروع للاتصال بـ Supabase الجديد
+**هنا نواجه مشكلة جوهرية:** ملف `src/integrations/supabase/client.ts` و `.env` و `supabase/config.toml` **مولّدة تلقائياً من Lovable Cloud** وتُكتب فوق أي تعديل يدوي.
 
-هل أبدأ بالمرحلة 1 فقط (الأقل خطورة) لإثبات النهج قبل الانتقال للأكبر؟
+الحلول الممكنة:
+- **(أ) الأنسب**: إنشاء **مشروع Lovable جديد** (Remix بدون Cloud) وربطه بـ Supabase الجديد عبر **Supabase Integration** الرسمية (زر Connect Supabase في Lovable).
+- **(ب) البديل**: الإبقاء على هذا المشروع وإضافة طبقة client مخصصة (`src/lib/supabase-custom.ts`) تشير لـ Supabase الجديد، واستبدال كل `import` تدريجياً — لكن Lovable Cloud يبقى مفعّل وما تقدرش تطفيه.
+
+### المرحلة 7: تحديث URLs والإعدادات
+- في Supabase الجديد: Authentication → URL Configuration → أضف `https://was-la.com` كـ Site URL و Redirect URLs.
+- تحديث Cloudflare Worker (`cloudflare-worker/worker.js`) لاستخدام الـ URL الجديد إن كان يستدعي Supabase.
+- إعادة ربط Custom Domains.
+
+### تحذيرات
+- **لا يمكن تعطيل Lovable Cloud** بعد تفعيله في هذا المشروع — لذلك الخيار (أ) في المرحلة 6 هو الأنظف.
+- **التوقف**: خلال النقل، أوقف كتابة طلبات جديدة من المستخدمين لتفادي فقدان بيانات.
+- **ستفقد**: تكامل types التلقائي، نشر edge functions التلقائي، إدارة secrets من Lovable.
+
+### المطلوب منك قبل البدء
+1. كلمة سر قاعدة البيانات الحالية (Lovable Cloud) — أين تجدها: Cloud → Database → Connection String → Reveal password.
+2. بيانات اتصال مشروع Supabase الجديد (URL + anon key + service_role + DB password).
+3. تأكيد: هل تريد المسار (أ) Remix جديد، أم (ب) تعديل هذا المشروع كما هو؟
