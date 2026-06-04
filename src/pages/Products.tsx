@@ -25,6 +25,7 @@ import { useUserContext } from "@/hooks/useUserContext";
 import { useStoreContext } from "@/hooks/useStoreContext";
 import { isolateLatin } from "@/lib/bidi";
 import LandingPageForm, { emptyLandingPageData, type LandingPageFormData } from "@/components/LandingPageForm";
+import { ProductsImportExport } from "@/components/ProductsImportExport";
 
 const ProductForm = lazy(() => import("@/components/ProductForm"));
 
