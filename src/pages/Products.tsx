@@ -1220,7 +1220,7 @@ const Products = () => {
             <Trash2 className="w-4 h-4" />
             سلة المحذوفات
           </Button>
-          <ProductsImportExport onDone={() => { loadProducts(); loadLandingPages(); }} />
+          <ProductsImportExport onDone={() => window.location.reload()} />
           <Button
             variant={strictStock ? "default" : "outline"}
             className="gap-2 w-full sm:w-auto"
