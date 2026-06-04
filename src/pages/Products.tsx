@@ -25,6 +25,7 @@ import { useUserContext } from "@/hooks/useUserContext";
 import { useStoreContext } from "@/hooks/useStoreContext";
 import { isolateLatin } from "@/lib/bidi";
 import LandingPageForm, { emptyLandingPageData, type LandingPageFormData } from "@/components/LandingPageForm";
+import { ProductsImportExport } from "@/components/ProductsImportExport";
 
 const ProductForm = lazy(() => import("@/components/ProductForm"));
 
@@ -1220,6 +1221,7 @@ const Products = () => {
             <Trash2 className="w-4 h-4" />
             سلة المحذوفات
           </Button>
+          <ProductsImportExport onDone={() => window.location.reload()} />
           <Button
             variant={strictStock ? "default" : "outline"}
             className="gap-2 w-full sm:w-auto"
