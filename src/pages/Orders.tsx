@@ -2166,6 +2166,15 @@ const Orders = () => {
                   <Printer className="w-4 h-4" />
                   طباعة كل الظاهر
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportShippedOrders}
+                  disabled={shippedOrders.length === 0}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  تصدير Excel
+                </Button>
                 <span className="text-xs text-muted-foreground">
                   لتعديل بيانات الستيكر، اذهب إلى "تصميم ستيكر الشحن" من القائمة.
                 </span>
