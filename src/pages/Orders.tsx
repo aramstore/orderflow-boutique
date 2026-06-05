@@ -1027,6 +1027,57 @@ const Orders = () => {
     });
   };
 
+  const exportShippedOrders = () => {
+    if (shippedOrders.length === 0) {
+      toast({
+        title: "تنبيه",
+        description: "لا توجد طلبات للتصدير",
+        variant: "destructive",
+      });
+      return;
+    }
+    const rows = shippedOrders.map((o, i) => {
+      const updated = o.carrier_status_updated_at
+        ? new Date(o.carrier_status_updated_at).toLocaleString("ar-LY")
+        : "";
+      return {
+        "#": i + 1,
+        "رقم الطلب": o.order_code || o.id.slice(0, 8),
+        "التاريخ": new Date(o.created_at).toLocaleString("ar-LY"),
+        "اسم العميل": o.customer_name || "",
+        "رقم الهاتف": o.phone || "",
+        "العنوان": o.address || "",
+        "المحافظة": (o as any).matched_zone_name || o.city || "",
+        "المنطقة": (o as any).matched_area_name || "",
+        "اسم المنتج": o.product_name || "",
+        "اللون": o.selected_color || "",
+        "المقاس": o.selected_size || "",
+        "كود المنتج": o.selected_product_code || "",
+        "عدد القطع": o.quantity || 1,
+        "السعر الإجمالي": Number(o.price) || 0,
+        "شامل الشحن": o.shipping_included ? "نعم" : "لا",
+        "رقم البوليصة (كود شركة التوصيل)": o.shipping_reference || "",
+        "حالة النظام المحلي": statusLabels[o.status] || o.status,
+        "حالة شركة التوصيل": o.carrier_status || "",
+        "آخر تحديث من الشركة": updated,
+        "ملاحظات الشركة": (o as any).carrier_notes || "",
+        "سبب الإلغاء من الشركة": (o as any).carrier_cancellation_reason_id || "",
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = Array(21).fill({ wch: 18 });
+    XLSX.utils.book_append_sheet(wb, ws, "Shipped");
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+    const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, "");
+    XLSX.writeFile(wb, `shipped_orders_${dateStr}_${timeStr}.xlsx`);
+    toast({
+      title: "تم التصدير",
+      description: `تم تصدير ${shippedOrders.length} طلب`,
+    });
+  };
+
   const displayProductName = (o: Order): string =>
     (o.product_id && productsMap[o.product_id]) || o.product_name || "";
   // Local sequential code per order: assigned in creation order (oldest = 01)
@@ -2114,6 +2165,15 @@ const Orders = () => {
                 >
                   <Printer className="w-4 h-4" />
                   طباعة كل الظاهر
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportShippedOrders}
+                  disabled={shippedOrders.length === 0}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  تصدير Excel
                 </Button>
                 <span className="text-xs text-muted-foreground">
                   لتعديل بيانات الستيكر، اذهب إلى "تصميم ستيكر الشحن" من القائمة.

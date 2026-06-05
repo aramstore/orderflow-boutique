@@ -1,34 +1,41 @@
-## خطة: تصدير قاعدة البيانات إلى ملف SQL واحد
+## الهدف
+إضافة زر **"تصدير Excel"** داخل تبويب **جاري التوصيل** في صفحة الطلبات، يصدّر الطلبات المعروضة حالياً (مع احترام الفلاتر النشطة: بحث / فلتر شركة الشحن / فلتر المنتج).
 
-### الناتج
-ملفان جاهزان في `/mnt/documents/`:
-1. **`01_schema.sql`** — كل السكيما: جداول `public` + functions + triggers + RLS policies + sequences + grants
-2. **`02_data.sql`** — INSERT statements لكل البيانات في جداول `public` + `auth.users` + `auth.identities`
+## محتوى الملف
+كل صف = طلب واحد، بالأعمدة التالية بالعربية:
 
-### طريقة الاستيراد عندك
-في مشروع Supabase الجديد (الفاضي):
-1. افتح **SQL Editor** → الصق محتوى `01_schema.sql` → Run
-2. الصق محتوى `02_data.sql` → Run
-3. شغّل ضبط الـ sequences:
-   ```sql
-   SELECT setval('public.order_code_seq',
-     COALESCE((SELECT MAX(last_value) FROM public.store_order_counters), 1));
-   ```
+- رقم الطلب (order_code)
+- التاريخ (created_at بصيغة محلية)
+- اسم العميل
+- رقم الهاتف
+- العنوان
+- المحافظة (matched_zone_name أو city)
+- المنطقة (matched_area_name)
+- اسم المنتج
+- اللون
+- المقاس
+- كود المنتج (selected_product_code) ← المطلوب
+- عدد القطع (quantity) ← المطلوب
+- السعر الإجمالي (price) ← المطلوب
+- شامل الشحن (نعم/لا)
+- رقم البوليصة (shipping_reference / shipping_id) ← كود شركة التوصيل
+- حالة النظام المحلي (نص عربي من ORDER_STATUS_LABELS مثل "جاري التوصيل") ← المطلوب
+- حالة شركة التوصيل (carrier_status) ← المطلوب
+- آخر تحديث من الشركة (carrier_status_updated_at)
+- ملاحظات الشركة (carrier_notes)
+- سبب الإلغاء من الشركة (carrier_cancellation_reason_id)
 
-### خطوات التنفيذ (من جهتي)
-1. **استخراج السكيما** عبر `pg_dump --schema-only --schema=public` على قاعدة Lovable Cloud الحالية (باستخدام `SUPABASE_DB_URL` الموجود في الـ secrets).
-2. **استخراج البيانات** عبر `pg_dump --data-only --schema=public` + `--data-only --schema=auth --table=auth.users --table=auth.identities`.
-3. **تنظيف الـ dump**: حذف مراجع `supabase_admin`, `pgsodium`, `vault`, `realtime`, `CREATE EXTENSION` للإضافات غير المتوفرة، و `ALTER ... OWNER TO`.
-4. **حفظ الملفات** في `/mnt/documents/` وإصدار `<presentation-artifact>` تنزّلها منها.
+## مكان الزر
+داخل `TabsContent value="shipped"` في `src/pages/Orders.tsx`، بجانب أزرار "طباعة المحدد" و"طباعة الكل" الموجودة حول السطر 2100، بنفس نمط الزر `exportPendingOrders` المستخدم في تبويب "قيد الانتظار".
 
-### ملاحظات مهمة
-- **Edge Functions**: ما تنتقلش مع SQL — لازم تنشرها يدوياً في Supabase الجديد بـ `supabase functions deploy` (كل الفولدرات تحت `supabase/functions/`)، وتضيف الـ secrets يدوياً (LOVABLE_API_KEY، VAPID_*، TURNSTILE_SECRET_KEY، إلخ).
-- **Storage buckets**: ما عندكش buckets حالياً، فما فيش ملفات تنقل.
-- **auth.users**: الباسوردات تنتقل مشفّرة (bcrypt)، المستخدمون يدخلون بنفس بياناتهم.
-- **بعد الاستيراد**: في Supabase Dashboard → Authentication → URL Configuration → ضيف `https://was-la.com` كـ Site URL.
+## التنفيذ التقني
+- دالة جديدة `exportShippedOrders()` في `src/pages/Orders.tsx` تستخدم نفس مكتبة `xlsx` المستوردة مسبقاً.
+- تصدّر مصفوفة `shippedOrders` (المفلترة) — لا نطلب من السيرفر بيانات جديدة، نستعمل ما هو محمّل ومعروض.
+- اسم الملف: `shipped_orders_YYYYMMDD_HHMMSS.xlsx`.
+- Toast نجاح بعدد الطلبات المصدَّرة، وToast تحذير إذا كانت القائمة فارغة.
+- لا تغييرات على قاعدة البيانات ولا على أي صفحة أخرى.
 
-### المطلوب منك
-- لا شيء قبل التنفيذ — عندي connection string للقاعدة الحالية في الـ secrets.
-- بعد التنفيذ: connection / SQL Editor access لمشروع Supabase الجديد عندك.
-
-وافق على الخطة وأنا أبدأ التصدير فوراً.
+## خارج النطاق
+- لا تعديل على منطق المزامنة مع شركة الشحن.
+- لا تغيير على تبويبات أخرى.
+- لا إضافة فلاتر جديدة — نحترم الفلاتر الحالية فقط.
