@@ -20,6 +20,6 @@ This gate coordinates the two deployments: publishing the Edge Function first do
 - Deployment returned version 30, ACTIVE, with the existing JWT verification setting preserved.
 - A public HTML request directly to the function returned HTTP 200 after deployment; its body hash matched the pre-deployment response exactly while the old frontend shell remains in use.
 
-GitHub upload still requires account authentication. The available repository baseline differs from the currently hosted frontend. Publish this branch for integration; reconcile it with the deployed frontend source before replacing the production application. The frontend origin must serve the matching marker in the shell used by `APP_ORIGIN`, and the domain's cached landing HTML must be refreshed when activating the design.
+This branch is prepared for integration. The available repository baseline differs from the currently hosted frontend; reconcile it with the deployed frontend source before replacing the production application. The frontend origin must serve the matching marker in the shell used by `APP_ORIGIN`, and the domain's cached landing HTML must be refreshed when activating the design.
 
 Do not use a whole-project database or function deployment for this visual change. The deployment performed here targeted `landing-ssr` only on the explicitly named production project.
