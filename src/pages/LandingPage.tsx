@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { isolateLatin } from "@/lib/bidi";
 import StoreHeader from "@/components/StoreHeader";
 import { PuckRender } from "@/components/PuckRender";
+import StandardLandingLayout from "@/components/landing/StandardLandingLayout";
+import { APPROVED_LANDING_DESIGN_VERSION, APPROVED_LANDING_SECTION_ORDER } from "@/lib/approvedLandingDesign";
+import "@/components/landing/standard-landing-approved.css";
 
 // Lazy-load DOMPurify only when description is rendered
 let DOMPurifyModule: typeof import("dompurify") | null = null;
@@ -177,6 +180,14 @@ const LandingPage = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedUpsellIndex, setSelectedUpsellIndex] = useState<number | null>(null);
   const [sanitizedDescription, setSanitizedDescription] = useState<string>("");
+
+  // The deployed Edge renderer keeps its first paint outside React's root.
+  // Replace it when loading settles, including an unavailable-product result.
+  useLayoutEffect(() => {
+    if (loading) return;
+    document.getElementById("ssr-fallback")?.remove();
+    document.getElementById("ssr-shell")?.remove();
+  }, [loading]);
   
   // Force light mode — landing pages should always look the same regardless of dashboard theme
   useEffect(() => {
@@ -1047,6 +1058,7 @@ const LandingPage = () => {
   };
 
   if (loading) {
+    if (typeof document !== "undefined" && document.getElementById("ssr-fallback")) return null;
     return (
       <div className="min-h-screen w-full bg-slate-50 font-cairo overflow-x-hidden" dir="rtl">
         <header className="bg-white border-b border-slate-100 py-4 px-6 text-center w-full">
@@ -1087,18 +1099,19 @@ const LandingPage = () => {
 
 
   // -------- Section slots (used by both legacy layout and Puck templates) --------
+  const puckHasContent = !!(puckData && Array.isArray(puckData?.content) && puckData.content.length > 0);
   const heroSlot = (
-      <section className="relative overflow-hidden bg-gradient-to-l from-[#0f172a] via-[#111c30] to-[#0f172a] py-8 sm:py-16 px-4 text-center text-white w-full border-b border-amber-500/15">
+      <section data-wasla-section="hero" className={`relative overflow-hidden bg-gradient-to-l from-[#0f172a] via-[#111c30] to-[#0f172a] ${puckHasContent ? "py-8 sm:py-16" : "py-4 sm:py-6"} px-4 text-center text-white w-full border-b border-amber-500/15`}>
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none opacity-40" />
         <div className="max-w-3xl mx-auto relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3.5 py-1.5 rounded-full text-xs font-bold mb-4 tracking-wide shadow-sm animate-bounce">
+          <div data-wasla-part="offer-badge" className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3.5 py-1.5 rounded-full text-xs font-bold mb-4 tracking-wide shadow-sm animate-bounce">
             <Sparkles className="w-3.5 h-3.5" />
             <span>عرض ملكي متاح لفترة وجيزة</span>
           </div>
-          <h1 className="text-xl sm:text-3xl md:text-5xl font-black mb-3 sm:mb-4 leading-tight bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-300">
+          <h1 data-wasla-part="hero-title" className={puckHasContent ? "text-xl sm:text-3xl md:text-5xl font-black mb-3 sm:mb-4 leading-tight bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-300" : "text-lg sm:text-2xl md:text-[28px] font-semibold mb-3 leading-relaxed break-words bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-300"}>
             {product.name}
           </h1>
-          <div className="flex items-center justify-center gap-3 text-xs sm:text-base text-slate-300">
+          <div data-wasla-part="guarantee-badge" className="flex items-center justify-center gap-3 text-xs sm:text-base text-slate-300">
             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
               <Award className="w-4 h-4 text-amber-400" />
               ضمان الجودة الفائقة
@@ -1110,7 +1123,7 @@ const LandingPage = () => {
   const productImagesSlot = (
     <>
             <div className="aspect-[4/5] sm:aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-white shadow-[0_15px_40px_-15px_rgba(0,0,0,0.12)] mb-4 relative border border-slate-100 group gpu">
-              <div className="absolute top-3 right-3 z-10 bg-[#0f172a]/80 backdrop-blur-md text-amber-400 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full border border-amber-500/20">
+              <div data-wasla-part="bestseller-badge" className="absolute top-3 right-3 z-10 bg-[#0f172a]/80 backdrop-blur-md text-amber-400 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full border border-amber-500/20">
                 ⭐ الأكثر مبيعاً في ليبيا
               </div>
               {product.images && product.images.length > 0 ? (
@@ -1120,7 +1133,7 @@ const LandingPage = () => {
                   className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
                   aria-label="تكبير تفاصيل المنتج"
                 >
-                  <img
+                  <img data-wasla-part="product-image"
                     src={product.images[selectedImage]}
                     alt={product.name}
                     className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
@@ -1481,7 +1494,7 @@ const LandingPage = () => {
     <>
         {/* وصف تفاصيل السلعة ومميزاتها */}
         {product.description && sanitizedDescription && (
-          <section className="mt-12 sm:mt-20 overflow-hidden bg-white p-6 sm:p-10 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.03)] border border-slate-100/80">
+          <section data-wasla-section="description" className="mt-12 sm:mt-20 overflow-hidden bg-white p-6 sm:p-10 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.03)] border border-slate-100/80">
             <div className="flex items-center gap-3 mb-6">
               <div className="bg-amber-500/10 p-2.5 rounded-xl">
                 <Sparkles className="w-5 h-5 text-amber-600" />
@@ -1500,7 +1513,7 @@ const LandingPage = () => {
     <>
         {/* آراء وتقييمات العملاء الموثوقة */}
         {product.reviews && product.reviews.length > 0 && (
-          <section className="mt-12 sm:mt-20">
+          <section data-wasla-section="reviews" className="mt-12 sm:mt-20">
             <div className="flex items-center gap-3 mb-6 sm:mb-8">
               <div className="bg-amber-500/10 p-2.5 rounded-xl">
                 <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
@@ -1542,7 +1555,7 @@ const LandingPage = () => {
     <>
         {/* الأسئلة المتكررة الشائعة حول الخدمة والمنتج */}
         {product.faqs && product.faqs.length > 0 && (
-          <section className="mt-12 sm:mt-20">
+          <section data-wasla-section="faq" className="mt-12 sm:mt-20">
             <div className="flex items-center gap-3 mb-6">
               <div className="bg-amber-500/10 p-2.5 rounded-xl">
                 <Award className="w-5 h-5 text-amber-600" />
@@ -1579,18 +1592,22 @@ const LandingPage = () => {
         )}
     </>
   );
-  const puckHasContent = !!(puckData && Array.isArray(puckData?.content) && puckData.content.length > 0);
-
   return (
     <div
-      className="min-h-screen w-full bg-[#fdfdfd] text-slate-900 font-cairo overflow-x-hidden pb-[calc(7rem+env(safe-area-inset-bottom))]"
+      className={`${!puckHasContent ? "wasla-standard-approved " : ""}min-h-screen w-full bg-[#fdfdfd] text-slate-900 font-cairo overflow-x-hidden pb-[calc(7rem+env(safe-area-inset-bottom))]`}
+      data-wasla-page={!puckHasContent ? "standard" : undefined}
+      data-wasla-design-version={!puckHasContent ? APPROVED_LANDING_DESIGN_VERSION : undefined}
       dir="rtl"
     >
       {/* خلفية تزيينية راقية من الإضاءات الخفيفة والناعمة */}
       <div className="absolute top-0 right-0 left-0 h-[600px] bg-gradient-to-b from-amber-500/5 via-primary/5 to-transparent -z-10 pointer-events-none" />
 
       {/* ترويسة المتجر الفخمة والثابتة بالقمة */}
-      <StoreHeader ownerId={product?.owner_id} />
+      <StoreHeader
+        ownerId={puckHasContent ? product?.owner_id : product?.owner_id || ownerId || undefined}
+        storeId={!puckHasContent ? storeId || undefined : undefined}
+        variant={!puckHasContent ? "landing" : "default"}
+      />
 
       {/* تنبيه منبثق بديل للتوست مصمم على الطراز الفاخر */}
       {toastMessage && (
@@ -1611,8 +1628,6 @@ const LandingPage = () => {
         </div>
       )}
 
-      {!puckHasContent && heroSlot}
-
       {puckHasContent ? (
         <PuckRender
           data={puckData}
@@ -1632,19 +1647,15 @@ const LandingPage = () => {
           }}
         />
       ) : (
-      <main className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-6 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          <div className={product.order_form_on_top ? "order-2 lg:order-1" : ""}>
-              {productImagesSlot}
-          </div>
-          <div className={`lg:sticky lg:top-24 h-fit ${product.order_form_on_top ? "order-1 lg:order-2" : ""}`}>
-              {orderFormSlot}
-          </div>
-        </div>
-        {productDescriptionSlot}
-        {productReviewsSlot}
-        {productFaqSlot}
-      </main>
+        <StandardLandingLayout
+          hero={heroSlot}
+          images={productImagesSlot}
+          order={orderFormSlot}
+          description={productDescriptionSlot}
+          reviews={productReviewsSlot}
+          faq={productFaqSlot}
+          sectionOrder={APPROVED_LANDING_SECTION_ORDER}
+        />
       )}
 
       {/* نافذة تكبير وتدقيق الصور (Lightbox) */}
@@ -1740,7 +1751,7 @@ const LandingPage = () => {
       )}
 
       {/* الزر السفلي العائم لسرعة التنقل والحجز (Sticky CTA) مع لمسات وتأثير زجاج بلوري فخم */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/80 backdrop-blur-lg border-t border-slate-100/80 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+      <div data-wasla-section="sticky" className="fixed bottom-0 inset-x-0 z-40 bg-white/80 backdrop-blur-lg border-t border-slate-100/80 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-4 max-w-md mx-auto">
           <div className="flex flex-col shrink-0">
             <span className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">

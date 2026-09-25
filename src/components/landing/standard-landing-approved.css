@@ -1,0 +1,122 @@
+/* Approved standard landing-page design; scoped to its page root. */
+.wasla-standard-approved[data-wasla-page="standard"] {
+  background: #07375f !important;
+}
+
+.wasla-standard-approved [data-wasla-section="header"] {
+  background: #09142f !important;
+  color: #ffffff;
+  margin-bottom: 12px !important;
+  display: block !important;
+}
+
+.wasla-standard-approved [data-wasla-part="brand-row"] {
+  min-height: 0 !important;
+  padding-block: 3px !important;
+}
+
+.wasla-standard-approved [data-wasla-part="store-name"] {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  line-height: 1.6 !important;
+}
+
+.wasla-standard-approved [data-wasla-section="hero"] {
+  background: #09142f !important;
+  color: #ffffff !important;
+  padding-block: 16px !important;
+  display: block !important;
+}
+
+.wasla-standard-approved [data-wasla-part="hero-title"] {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  color: #ffffff !important;
+  background: none !important;
+}
+
+.wasla-standard-approved [data-wasla-part="offer-badge"] {
+  display: none !important;
+}
+
+.wasla-standard-approved [data-wasla-part="guarantee-badge"] {
+  display: none !important;
+}
+
+.wasla-standard-approved [data-wasla-part="bestseller-badge"] {
+  display: none !important;
+}
+
+.wasla-standard-approved [data-wasla-part="main"] {
+  max-width: 1152px !important;
+  padding-block: 24px !important;
+}
+
+.wasla-standard-approved [data-wasla-layout="ordered"] [data-wasla-row="content"] {
+  padding-block: 0 !important;
+}
+
+.wasla-standard-approved [data-wasla-part="checkout-grid"] {
+  gap: 32px !important;
+}
+
+.wasla-standard-approved [data-wasla-section="images"] > div:first-child {
+  aspect-ratio: 4 / 5 !important;
+  border-radius: 24px !important;
+}
+
+.wasla-standard-approved [data-wasla-part="product-image"] {
+  padding: 0px !important;
+  object-fit: cover !important;
+}
+
+.wasla-standard-approved [data-wasla-section="order"] > div {
+  background: #ffffff !important;
+  padding: 16px !important;
+  border-radius: 24px !important;
+}
+
+.wasla-standard-approved [data-wasla-section="order"] button[type="submit"],
+.wasla-standard-approved [data-wasla-section="sticky"] button {
+  background: #d97706 !important;
+  color: #0f172a !important;
+  border-radius: 17px !important;
+  min-height: 52px !important;
+  padding-block: 12px !important;
+  box-shadow: none !important;
+}
+
+.wasla-standard-approved [data-wasla-section="description"],
+.wasla-standard-approved [data-wasla-section="reviews"],
+.wasla-standard-approved [data-wasla-section="faq"] {
+  margin-top: 48px !important;
+}
+
+.wasla-standard-approved [data-wasla-section="description"] {
+  display: block !important;
+  border-radius: 24px !important;
+}
+
+.wasla-standard-approved [data-wasla-section="reviews"] {
+  display: block !important;
+}
+
+.wasla-standard-approved [data-wasla-section="faq"] {
+  display: block !important;
+}
+
+.wasla-standard-approved [data-wasla-section="sticky"] {
+  display: block !important;
+}
+
+@media (min-width: 640px) {
+  .wasla-standard-approved [data-wasla-part="store-name"] {
+    font-size: 18px !important;
+  }
+
+  .wasla-standard-approved [data-wasla-part="hero-title"] {
+    font-size: 28px !important;
+  }
+}
