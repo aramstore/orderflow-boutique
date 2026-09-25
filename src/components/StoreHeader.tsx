@@ -29,9 +29,10 @@ const DEFAULTS: HeaderSettings = {
 interface StoreHeaderProps {
   ownerId?: string;
   storeId?: string;
+  variant?: "default" | "landing";
 }
 
-const StoreHeader = ({ ownerId, storeId }: StoreHeaderProps = {}) => {
+const StoreHeader = ({ ownerId, storeId, variant = "default" }: StoreHeaderProps = {}) => {
   const [settings, setSettings] = useState<HeaderSettings>(DEFAULTS);
 
   useEffect(() => {
@@ -57,7 +58,7 @@ const StoreHeader = ({ ownerId, storeId }: StoreHeaderProps = {}) => {
     settings.instagram_url || settings.facebook_url || settings.whatsapp_url || settings.tiktok_url;
 
   return (
-    <header className="w-full bg-gradient-to-l from-primary/10 via-background to-primary/5 border-b border-border mb-6 rounded-lg overflow-hidden" dir="rtl">
+    <header data-wasla-section="header" className={`w-full bg-gradient-to-l from-primary/10 via-background to-primary/5 border-b border-border rounded-lg overflow-hidden ${variant === "landing" ? "mb-3" : "mb-6"}`} dir="rtl">
       {/* Top contact bar */}
       {(hasContact || hasSocial) && (
         <div className="bg-foreground/95 text-background text-xs sm:text-sm">
@@ -110,22 +111,28 @@ const StoreHeader = ({ ownerId, storeId }: StoreHeaderProps = {}) => {
       )}
 
       {/* Main header */}
-      <div className="container mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div data-wasla-part="brand-row" className={`container mx-auto px-4 flex flex-col sm:flex-row items-center ${variant === "landing" ? "min-h-14 py-2 sm:py-3 gap-2 justify-center sm:justify-between" : "py-6 gap-4 justify-between"}`}>
+        <div className={variant === "landing" ? "flex min-w-0 max-w-full items-center gap-2.5" : "flex items-center gap-4"}>
           {settings.logo_image && (
             <img
               src={settings.logo_image}
               alt={settings.logo_text}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-primary/30"
+              className={`${variant === "landing" ? "w-8 h-8 sm:w-10 sm:h-10 shrink-0" : "w-14 h-14 sm:w-16 sm:h-16"} rounded-full object-cover border-2 border-primary/30`}
               loading="eager"
             />
           )}
-          <div className="text-center sm:text-right">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-              {settings.logo_text}
-            </h1>
+          <div className={`${variant === "landing" ? "min-w-0 " : ""}text-center sm:text-right`}>
+            {variant === "landing" ? (
+              <p data-wasla-part="store-name" className="text-base sm:text-lg font-semibold leading-6 text-foreground break-words">
+                {settings.logo_text}
+              </p>
+            ) : (
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                {settings.logo_text}
+              </h1>
+            )}
             {settings.tagline && (
-              <p className="text-sm sm:text-base text-muted-foreground mt-1">{settings.tagline}</p>
+              <p className={`${variant === "landing" ? "text-xs sm:text-sm" : "text-sm sm:text-base"} text-muted-foreground mt-1`}>{settings.tagline}</p>
             )}
           </div>
         </div>
